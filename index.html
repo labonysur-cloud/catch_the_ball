@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Newton's Apple Catch Game</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Aldrich');
+
+    :root {
+      --bg-color: #fffdc3;
+      --text-color: #173b0c;
+      --subtext-color: #6bc358;
+      --shadow-light: rgba(191, 235, 96, 0.05);
+      --shadow-medium: rgba(0, 0, 0, 0.1);
+      --primary-color: #111827;
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border-radius: 0.75rem;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg-color);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 3rem 1rem 5rem;
+    }
+    main {
+      max-width: 600px;
+      width: 100%;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      color: var(--primary-color);
+    }
+    header p {
+      color: var(--subtext-color);
+      font-size: 1.125rem;
+      margin: 0;
+    }
+    .game-card {
+      background: rgba(255,255,255,0.85);
+      border-radius: var(--border-radius);
+      box-shadow:
+        0 4px 6px var(--shadow-light),
+        0 1px 3px var(--shadow-medium);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #game-area {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: url('image/sunny-day-under-an-apple-tree-v0-qbakr3ba1i3a1.webp') center center/cover no-repeat;
+      border-radius: var(--border-radius);
+      box-shadow:
+        inset 0 0 10px var(--shadow-light);
+      overflow: hidden;
+      user-select: none;
+    }
+    #basket {
+      position: absolute;
+      bottom: 10px;
+      width: 100px;
+      height: 90px;
+      left: 90%;
+      transform: translateX(-50%);
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+      outline: none;
+      background: none;
+      z-index: 2;
+    }
+    #basket img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      display: block;
+    }
+    .ball {
+      position: absolute;
+      width: 60px;
+      height: 90px;
+      pointer-events: none;
+      z-index: 2;
+      background: none;
+    }
+    .ball img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+    }
+    #score-board {
+      font-weight: 600;
+      font-size: 1.5rem;
+      color: var(--accent-color);
+      margin: 1rem 0 0 0;
+      text-align: center;
+    }
+    #instructions {
+      font-size: 0.9rem;
+      color: var(--subtext-color);
+      margin-top: 0.5rem;
+    }
+    button {
+      margin-top: 1.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: var(--border-radius);
+      background: var(--accent-color);
+      color: white;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    button:hover,
+    button:focus-visible {
+      background-color: var(--accent-hover);
+      outline: none;
+    }
+    #game-over {
+      display: none;
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,255,255,0.95);
+      border-radius: 1rem;
+      padding: 2rem 2.5rem;
+      font-size: 2rem;
+      color: #b91c1c;
+      font-weight: bold;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1> Catch Your Apple!</h1>
+    <p>Move Newton to catch the falling apples 🍎</p>
+  </header>
+  <section class="game-card" aria-label="Catch the Ball game area">
+    <div id="game-area" role="region" aria-live="polite" aria-label="Game play area">
+      <div id="basket" aria-label="Newton controlled by player" tabindex="0">
+        <img src="image/scientist-street-fighter-game-pixel-art-animation-by-diego-sanches-221-removebg-preview.png" alt="Newton" draggable="false" />
+      </div>
+      <div id="game-over">Game Over!</div>
+    </div>
+    <div id="score-board" aria-live="polite" aria-atomic="true">Score: 0</div>
+    <div id="instructions">Use mouse or arrow keys to move Newton</div>
+    <button id="start-btn" aria-label="Start game">Start Game</button>
+  </section>
+</main>
+
+
+<audio id="bg-music" src="sound/bg-music.mp3" loop preload="auto"></audio>
+<audio id="catch-sound" src="sound/mixkit-player-jumping-in-a-video-game-2043.wav" preload="auto"></audio>
+<audio id="gameover-sound" src="sound/mixkit-game-level-completed-2059.wav" preload="auto"></audio>
+<audio id="lose-sound" src="sound/mixkit-player-losing-or-failing-2042.wav" preload="auto"></audio>
+
+<script>
+(function() {
+  const gameArea = document.getElementById('game-area');
+  const basket = document.getElementById('basket');
+  const scoreBoard = document.getElementById('score-board');
+  const startBtn = document.getElementById('start-btn');
+  const gameOverDiv = document.getElementById('game-over');
+
+  const bgMusic = document.getElementById('bg-music');
+  const catchSound = document.getElementById('catch-sound');
+  const gameoverSound = document.getElementById('gameover-sound');
+  const loseSound = document.getElementById('lose-sound');
+
+  let basketPos = 0;
+  let basketSpeed = 8;
+  let score = 0;
+  let balls = [];
+  let animationFrameId = null;
+  let gameRunning = false;
+  let lastSpawnTime = 0;
+  const spawnInterval = 1200; 
+  let keysPressed = {};
+  let missed = 0;
+  const maxMissed = 5;
+
+  function updateBasketPosition() {
+    if (keysPressed['ArrowLeft'] || keysPressed['a']) {
+      basketPos -= basketSpeed;
+    }
+    if (keysPressed['ArrowRight'] || keysPressed['d']) {
+      basketPos += basketSpeed;
+    }
+    basketPos = Math.min(Math.max(0, basketPos), gameArea.clientWidth - basket.clientWidth);
+    basket.style.left = basketPos + 'px';
+  }
+
+  function createBall() {
+    const ball = document.createElement('div');
+    ball.classList.add('ball');
+    const img = document.createElement('img');
+    img.src = "Image/apple.png";
+    img.alt = "Apple";
+    img.draggable = false;
+    ball.appendChild(img);
+
+    
+    const x = Math.random() * (gameArea.clientWidth - 40);
+    ball.style.left = x + 'px';
+    ball.style.top = '0';
+    gameArea.appendChild(ball);
+    balls.push({element: ball, y: 0, x: x, speed: 2.5 + Math.random() * 2});
+  }
+
+  function updateBalls() {
+    for (let i = balls.length - 1; i >= 0; i--) {
+      let b = balls[i];
+      b.y += b.speed;
+      b.element.style.top = b.y + 'px';
+
+      
+      if (
+        b.y + 40 >= gameArea.clientHeight - basket.clientHeight - 10 &&
+        b.x + 40 >= basketPos &&
+        b.x <= basketPos + basket.clientWidth
+      ) {
+        
+        score++;
+        scoreBoard.textContent = 'Score: ' + score;
+        gameArea.removeChild(b.element);
+        balls.splice(i, 1);
+        if (catchSound) {
+          catchSound.currentTime = 0;
+          catchSound.play();
+        }
+        continue;
+      }
+
+      
+      if (b.y > gameArea.clientHeight) {
+        gameArea.removeChild(b.element);
+        balls.splice(i, 1);
+        missed++;
+        if (loseSound) {
+          loseSound.currentTime = 0;
+          loseSound.play();
+        }
+        if (missed >= maxMissed) {
+          endGame();
+        }
+      }
+    }
+  }
+
+  function gameLoop(timestamp) {
+    if (!gameRunning) return;
+    if (!lastSpawnTime) lastSpawnTime = timestamp;
+
+    updateBasketPosition();
+    updateBalls();
+
+    if (timestamp - lastSpawnTime > spawnInterval) {
+      createBall();
+      lastSpawnTime = timestamp;
+    }
+
+    animationFrameId = requestAnimationFrame(gameLoop);
+  }
+
+  function startGame() {
+    if (gameRunning) return;
+    
+    score = 0;
+    missed = 0;
+    scoreBoard.textContent = 'Score: 0';
+    balls.forEach(b => gameArea.removeChild(b.element));
+    balls = [];
+    basketPos = gameArea.clientWidth / 2 - basket.clientWidth / 2;
+    basket.style.left = basketPos + 'px';
+    lastSpawnTime = 0;
+    gameRunning = true;
+    startBtn.textContent = 'Restart Game';
+    gameOverDiv.style.display = 'none';
+    animationFrameId = requestAnimationFrame(gameLoop);
+    basket.focus();
+    if (bgMusic) {
+      bgMusic.currentTime = 0;
+      bgMusic.volume = 0.5;
+      bgMusic.play();
+    }
+  }
+
+  function endGame() {
+    gameRunning = false;
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    gameOverDiv.style.display = 'block';
+    gameOverDiv.textContent = "Game Over! Score: " + score;
+    if (bgMusic) bgMusic.pause();
+    if (gameoverSound) {
+      gameoverSound.currentTime = 0;
+      gameoverSound.play();
+    }
+  }
+
+  function stopGame() {
+    gameRunning = false;
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    if (bgMusic) bgMusic.pause();
+  }
+
+  
+  window.addEventListener('keydown', (e) => {
+    keysPressed[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    keysPressed[e.key] = false;
+  });
+
+  
+  gameArea.addEventListener('mousemove', (e) => {
+    if (!gameRunning) return;
+    const rect = gameArea.getBoundingClientRect();
+    let x = e.clientX - rect.left - basket.clientWidth / 2;
+    x = Math.min(Math.max(0, x), gameArea.clientWidth - basket.clientWidth);
+    basketPos = x;
+    basket.style.left = basketPos + 'px';
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (gameRunning) {
+      stopGame();
+    }
+    startGame();
+  });
+
+  
+  window.addEventListener('resize', () => {
+    basketPos = gameArea.clientWidth / 2 - basket.clientWidth / 2;
+    basket.style.left = basketPos + 'px';
+  });
+
+  
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (bgMusic) bgMusic.pause();
+      stopGame();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
